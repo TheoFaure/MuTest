@@ -1,0 +1,15 @@
+
+{% extends "framework/base.html" %}
+
+{% block content %}
+<span id="nb_missing_answers">{{ nb_missing_answers }}</span> missing answers.
+<button onclick="call_counter()">Compute missing answers</button>
+<span id="error"></span>
+
+Accuracy:
+    <div id="acc">
+    {%  for acc, int in accuracies %}
+        {{ acc }}, {{ int }}
+    {% endfor %}
+    </div>
+{% endblock %}
