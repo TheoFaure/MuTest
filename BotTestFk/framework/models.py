@@ -88,7 +88,8 @@ class Utterance(models.Model):
             raise e
 
     def mutate(self, strategy, validation, nb):
-        strategy.mutate(self.sentence, validation, nb)
+        #TODO do the mutation using the mutation method and validation method
+
 
 
 class Mutant(models.Model):
