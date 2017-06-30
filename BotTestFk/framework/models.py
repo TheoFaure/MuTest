@@ -1,5 +1,8 @@
 from django.db import models
 from framework.api_calls import get_luis
+from framework.mutation_methods import mutation_homophones, mutation_swap_letter, mutation_swap_word, mutation_random, \
+    mutation_verb_at_end
+from framework.validation_methods import is_valid_true, is_valid_spellcheck
 
 
 class Chatbot(models.Model):
@@ -46,6 +49,15 @@ class Utterance(models.Model):
     expected_intent = models.ForeignKey(Intent, on_delete=models.CASCADE, default=1) # 1 is the pk for "None"
     answer = models.ForeignKey(Answer, on_delete=models.CASCADE, null=True, blank=True)
 
+    dispatcher_mutations = {"homophones": mutation_homophones,
+                            "swapletter": mutation_swap_letter,
+                            "swapword": mutation_swap_word,
+                            "random": mutation_random,
+                            "verb-end": mutation_verb_at_end}
+
+    dispatcher_validations = {"none": is_valid_true,
+                              "google-spell-check": is_valid_spellcheck}
+
     def __str__(self):
         return self.sentence
 
@@ -88,8 +100,14 @@ class Utterance(models.Model):
             raise e
 
     def mutate(self, strategy, validation, nb):
-        #TODO do the mutation using the mutation method and validation method
+        strategy_method = self.dispatcher_mutations[strategy]
+        validation_method = self.dispatcher_validations[validation]
 
+        mutants = strategy_method(self.sentence, validation_method, nb)
+
+        for mutant in mutants:
+            m = Mutant(sentence=mutant, utterance=self, strategy=strategy, validation=validation)
+            m.save()
 
 
 class Mutant(models.Model):
@@ -98,5 +116,6 @@ class Mutant(models.Model):
     validation = models.ForeignKey(Validation, on_delete=models.CASCADE)
     answer = models.ForeignKey(Answer, on_delete=models.CASCADE, blank=True, null=True)
     utterance = models.ForeignKey(Utterance, on_delete=models.CASCADE)
+
     def __str__(self):
         return self.sentence
