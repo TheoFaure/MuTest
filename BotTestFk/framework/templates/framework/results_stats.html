@@ -1,0 +1,34 @@
+
+{% extends "framework/base.html" %}
+
+{% block content %}
+    <h1>Results</h1>
+
+    <table id="intent_robustness">
+    <tr>
+    <th scope="col">Intent</th>
+    <th scope="col">Robustness</th>
+    </tr>
+        {% for i in intents%}
+            <tr>
+            <td>{{ i }}</td>
+            <td>{{ i.robustness }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+
+    <table id="strategy_robustness">
+    <tr>
+    <th scope="col">Strategy</th>
+    <th scope="col">Robustness</th>
+    </tr>
+        {% for s in strategies%}
+            <tr>
+            <td>{{ s }}</td>
+            <td>{{ s.intent_robustness }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+
+    <a href="/framework/results_detailed">See detailed results</a>
+{% endblock %}

@@ -12,4 +12,3 @@ class CreateMutantsForm(forms.Form):
     validation = forms.ModelChoiceField(queryset=Validation.objects.all())
     chatbot = forms.ModelChoiceField(queryset=Chatbot.objects.all())
     nb_per_mutant = forms.IntegerField(max_value=100, min_value=1)
-    compute_ans = forms.BooleanField(required=False)

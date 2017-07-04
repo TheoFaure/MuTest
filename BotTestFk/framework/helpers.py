@@ -1,6 +1,7 @@
-from django.db.models import Count
+from django.db.models import Count, ObjectDoesNotExist
 
-from .models import Utterance, Intent, Answer, Strategy
+from framework.api_calls import get_luis
+from .models import Utterance, Intent, Answer, Strategy, Chatbot
 
 
 def add_utterances(utterances, intent_id):
@@ -9,8 +10,9 @@ def add_utterances(utterances, intent_id):
     intent = Intent.objects.get(id=intent_id)
 
     for line in lines:
-        utt = Utterance(sentence=line, expected_intent=intent)
-        utt.save()
+        if Utterance.objects.filter(sentence=line).count() == 0:
+            utt = Utterance(sentence=line, expected_intent=intent)
+            utt.save()
 
 
 def get_accuracy():
@@ -50,5 +52,9 @@ def create_mutants_helper(strategy, validation, chatbot, nb):
         mutant__strategy=strategy,
         mutant__validation=validation
     )
+    nb_mutants = 0
     for utt in utt_to_mutate:
-        utt.mutate(strategy, validation, nb)
+        if utt.mutant_set.filter(strategy=strategy, validation=validation).count() < nb:
+            nb_mutants += utt.mutate(strategy, validation, nb)
+
+    return nb_mutants

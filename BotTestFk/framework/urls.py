@@ -15,5 +15,5 @@ urlpatterns = [
 
     url(r'^results_stats/$', views.results_stats, name='results_stats'),
     url(r'^results_detailed/$', views.results_detailed, name='results_detailed'),
-    url(r'^results_detailed/(?P<utterance_id>[0-9]+)/$', views.results_utterance, name='results_utterance'),
+    url(r'^results_utterance/(?P<utterance_id>[0-9]+)/$', views.results_utterance, name='results_utterance'),
 ]
