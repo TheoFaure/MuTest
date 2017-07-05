@@ -1,6 +1,9 @@
 import re
-import http.client, urllib.request, urllib.parse, urllib.error
-from framework.api_calls import send_request
+import urllib.error
+import urllib.parse
+import urllib.request
+
+from framework.helpers.api_calls import send_request
 
 
 def is_valid_true(s1, s2):

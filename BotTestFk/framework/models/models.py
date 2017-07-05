@@ -2,8 +2,8 @@ from django.db import models
 from framework.api_calls import get_luis
 from framework.mutation_methods import mutation_homophones, mutation_swap_letter, mutation_swap_word, mutation_random, \
     mutation_verb_at_end
-from framework.validation_methods import is_valid_true, is_valid_spellcheck
-from django.db.models import Avg
+
+from framework.helpers.validation_methods import is_valid_true, is_valid_spellcheck
 
 
 def get_answer(sentence):
@@ -148,9 +148,9 @@ class Utterance(models.Model):
         nb_mutants_created = existing_mutants.count()
 
         if nb_mutants_created >= nb:
-            look_for_mutants = True
-        else:
             look_for_mutants = False
+        else:
+            look_for_mutants = True
 
         while look_for_mutants:
             new_mutant = strategy_method(self.sentence, existing_mutants)
@@ -212,15 +212,3 @@ class Mutant(models.Model):
         if self.answer == None:
             self.answer = get_answer(self.sentence)
             self.save()
-
-
-class Homophone(models.Model):
-    def __str__(self):
-        return self.word_set.all()
-
-
-class Word(models.Model):
-    word = models.CharField(max_length=30)
-    homophone = models.ForeignKey(Homophone, on_delete=models.CASCADE)
-    def __str__(self):
-        return self.word

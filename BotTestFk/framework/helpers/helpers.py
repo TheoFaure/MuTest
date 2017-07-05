@@ -1,7 +1,6 @@
-from django.db.models import Count, ObjectDoesNotExist
+from django.db.models import Count
 
-from framework.api_calls import get_luis
-from .models import Utterance, Intent, Answer, Strategy, Chatbot
+from framework.models import Utterance, Intent, Answer
 
 
 def add_utterances(utterances, intent_id):

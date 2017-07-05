@@ -6,10 +6,10 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import Utterance, Answer, Intent, Mutant, Strategy
+from .models.models import Utterance, Answer, Intent, Mutant, Strategy
 from django.template import loader
 from .forms import UploadUtterancesForm, CreateMutantsForm
-from .helpers import add_utterances, get_accuracy, create_mutants_helper
+from .helpers.helpers import add_utterances, get_accuracy, create_mutants_helper
 from django.http import HttpResponseRedirect
 
 
@@ -79,7 +79,7 @@ def mutants_answers(request):
 
     nb_missing_answers = Mutant.objects.filter(answer_id__isnull=True).count()
 
-    context = { "nb_missing_answers": nb_missing_answers}
+    context = {"nb_missing_answers": nb_missing_answers}
     j = json.dumps(context)
     return HttpResponse(j)
 
