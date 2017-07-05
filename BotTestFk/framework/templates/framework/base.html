@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Bot Test Framework</title>
+    <title>
+    {% block title %}Bot Testing framework{% endblock %}
+    </title>
     {% load staticfiles %}
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script type="text/javascript" src="{% static '/framework/js/myscript.js' %}"></script>

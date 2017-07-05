@@ -1,4 +1,5 @@
 {% extends "framework/base.html" %}
+{% block title %}Results utterance - BotTestFk{% endblock %}
 
 {% block content %}
     <h1>"{{ utterance.sentence }}"</h1>
@@ -11,6 +12,8 @@
     <div>Intent robustness: {{ utterance.intent_robustness}}</div>
     <div>Entity robustness: {{ utterance.entity_robustness}}</div>
 
+    <button id="display-good-answers" onclick="$('.good-answer').toggle();">Display/hide good answers</button>
+
     {% for strategy in possible_strategies %}
         <h2>{{ strategy }}</h2>
         <table id="{{ strategy }}" title="{{ strategy }}">
@@ -20,19 +23,21 @@
                 <th scope="col">Entities</th>
             </tr>
             {% for m in utterance.mutant_set.all %}
-                {% if m.answer.intent == utterance.answer.intent %}
-                    <tr style="color:green">
-                {% else %}
-                    <tr style="color:red">
+                {% if m.strategy == strategy %}
+                    {% if m.answer.intent == utterance.answer.intent and m.entity_robustness == 1 %}
+                        <tr style="color:green" class="good-answer">
+                    {% else %}
+                        <tr style="color:red">
+                    {% endif %}
+                            <td>{{ m.sentence }}</td>
+                            <td>{{ m.answer.intent }}</td>
+                            <td>
+                                [ {% for enti in m.answer.entity.all %}
+                                    "{{ enti.type }}": "{{ enti.value }}",
+                                {% endfor %} ]
+                            </td>
+                        </tr>
                 {% endif %}
-                        <td>{{ m.sentence }}</td>
-                        <td>{{ m.answer.intent }}</td>
-                        <td>
-                            [ {% for enti in m.answer.entity.all %}
-                                "{{ enti.type }}": "{{ enti.value }}",
-                            {% endfor %} ]
-                        </td>
-                    </tr>
             {% endfor %}
         </table>
     {% endfor %}

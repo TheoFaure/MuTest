@@ -28,3 +28,5 @@ function compute_mut_answers(url) {
         }
     });
 }
+
+$('#display-good-answers').click(function() { $(".good-answer").toggle(); });

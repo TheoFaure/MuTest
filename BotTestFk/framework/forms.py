@@ -1,5 +1,5 @@
 from django import forms
-from .models import Intent, Strategy, Validation, Chatbot
+from .models.models import Intent, Strategy, Validation, Chatbot
 
 
 class UploadUtterancesForm(forms.Form):

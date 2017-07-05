@@ -1,6 +1,6 @@
 from django.db import models
-from framework.api_calls import get_luis
-from framework.mutation_methods import mutation_homophones, mutation_swap_letter, mutation_swap_word, mutation_random, \
+from framework.helpers.api_calls import get_luis
+from framework.helpers.mutation_methods import mutation_homophones, mutation_swap_letter, mutation_swap_word, mutation_random, \
     mutation_verb_at_end
 
 from framework.helpers.validation_methods import is_valid_true, is_valid_spellcheck
@@ -86,6 +86,12 @@ class Entity(models.Model):
         else:
             return 0
 
+    def is_same_entity(self, e):
+        if self.type == e.type and self.value == e.value:
+            return True
+        else:
+            return False
+
 
 class Strategy(models.Model):
     name = models.CharField(max_length=200)
@@ -143,11 +149,12 @@ class Utterance(models.Model):
         strategy_method = self.dispatcher_mutations[strategy.name]
         validation_method = self.dispatcher_validations[validation.name]
 
-        existing_mutants = self.mutant_set.all()
+        existing_mutants = self.mutant_set.filter(strategy=strategy, validation=validation)
 
-        nb_mutants_created = existing_mutants.count()
+        nb_mutants_created = 0
+        nb_mutants_existing = existing_mutants.count()
 
-        if nb_mutants_created >= nb:
+        if nb_mutants_existing >= nb:
             look_for_mutants = False
         else:
             look_for_mutants = True
@@ -162,41 +169,33 @@ class Utterance(models.Model):
                     m = Mutant(sentence=new_mutant, utterance=self, strategy=strategy, validation=validation)
                     m.save()
                     nb_mutants_created += 1
+                    nb_mutants_existing += 1
 
-                if nb_mutants_created >= nb:
+                if nb_mutants_existing >= nb:
                     look_for_mutants = False
 
         return nb_mutants_created
 
     @property
     def intent_robustness(self):
-        r = 0
-        for m in self.mutant_set.all():
-            if self.answer.intent == m.answer.intent:
-                r += 1
-        return r / self.mutant_set.count()
+        if self.mutant_set.count() > 0:
+            r = 0
+            for m in self.mutant_set.all():
+                if self.answer.intent == m.answer.intent:
+                    r += 1
+            return r / self.mutant_set.count()
+        else:
+            return 1
 
     @property
     def entity_robustness(self):
-        # TODO fix this
-        entity_score = self.mutant_set.count()
-        for m in self.mutant_set.all():
-            cont = True
-            if self.answer.entity.count() > 0:
-                for mutant_entity in m.answer.entity.all():
-                    if mutant_entity not in self.answer.entity.all():
-                        entity_score -= 1
-                        cont = False
-                        break
-
-                if cont:
-                    for mutant_entity in self.answer.entity.all():
-                        if mutant_entity not in m.answer.entity.all():
-                            entity_score -= 1
-                            break
-
-        return entity_score / self.mutant_set.count()
-
+        if self.mutant_set.count() > 0:
+            score = 0
+            for m in self.mutant_set.all():
+                score += m.entity_robustness
+            return score / self.mutant_set.count()
+        else:
+            return 1
 
 class Mutant(models.Model):
     sentence = models.CharField(max_length=1000)
@@ -212,3 +211,17 @@ class Mutant(models.Model):
         if self.answer == None:
             self.answer = get_answer(self.sentence)
             self.save()
+
+    @property
+    def entity_robustness(self):
+        score = 0
+        if self.utterance.answer.entity.all().count() > 0:
+            for e1 in self.utterance.answer.entity.all():
+                available_entities = [e for e in self.answer.entity.all()]
+                for e2 in reversed(available_entities):
+                    if e1.is_same_entity(e2):
+                        score += 1
+                        available_entities.remove(e2)
+            return score / self.utterance.answer.entity.all().count()
+        else:
+            return 1

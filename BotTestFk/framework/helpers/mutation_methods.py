@@ -17,16 +17,17 @@ def swap(array, i1, i2):
 
 def is_possible_new_mutants_swap_word(sentence, existing_mutants):
     nb_words = len(sentence.split(" "))
-    if math.factorial(nb_words) >= existing_mutants.count():
+    if existing_mutants.count() >= nb_words - 1:
         return False
     else:
         return True
 
 
 def mutation_swap_word(sentence, existing_mutants):
-    look_for_mutant = True
-    mutant = "no mutant"
-    while look_for_mutant:
+    if not is_possible_new_mutants_swap_word(sentence, existing_mutants):
+        return "no mutant"
+
+    while True:
         line_formatted = (re.sub('[\.,!?]', '', sentence)).lower()
         line_array = line_formatted.split()
         i1 = random.randint(0, len(line_array) - 1)
@@ -37,14 +38,8 @@ def mutation_swap_word(sentence, existing_mutants):
             i2 = i1 + 1
 
         mutant = " ".join(swap(line_array, i1, i2))  # swap the words
-        if mutant not in existing_mutants.values('sentence'):
-            look_for_mutant = False
-
-        if not is_possible_new_mutants_swap_word(sentence, existing_mutants):
-            look_for_mutant = False
-            mutant = "no mutant"
-
-    return mutant
+        if mutant not in [a['sentence'] for a in existing_mutants.values('sentence')]:
+            return mutant
 
 
 def position_of_verb(sentence, index):
@@ -112,7 +107,7 @@ def mutation_swap_letter(sentence, existing_mutants):
         mutant = line_formatted[:min(index, swap_index)] + line_formatted[max(index, swap_index)] + \
                     line_formatted[min(index, swap_index)] + line_formatted[max(index, swap_index)+1:]
 
-        if mutant not in existing_mutants.values('sentence'):
+        if mutant not in [a['sentence'] for a in existing_mutants.values('sentence')]:
             look_for_mutants = False
 
         nb_trials += 1
@@ -131,7 +126,7 @@ def mutation_random(sentence, existing_mutants):
             index = random.randint(0, len(sentence) - 1)
         letter = random.choice('abcdefghijklmnopqrstuvwxyz')
         mutant = sentence[:index] + letter + sentence[index + 1:]
-        if mutant not in existing_mutants.values('sentence'):
+        if mutant not in [a['sentence'] for a in existing_mutants.values('sentence')]:
             look_for_mutants = False
         nb_trials += 1
         if nb_trials >= 4:
@@ -179,7 +174,7 @@ def mutation_homophones(sentence, existing_mutants):
     sentence_words[possibilities[nb_existing][0]] = possibilities[nb_existing][2]
     mutant = " ".join(sentence_words)
 
-    if mutant in existing_mutants:
+    if mutant in [a['sentence'] for a in existing_mutants.values('sentence')]:
         raise ValueError("Fail, the mutant created already exists... bug in homophones creation")
 
     return mutant

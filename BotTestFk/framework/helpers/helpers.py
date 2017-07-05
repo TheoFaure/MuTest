@@ -1,6 +1,6 @@
 from django.db.models import Count
 
-from framework.models import Utterance, Intent, Answer
+from framework.models.models import Utterance, Intent, Answer
 
 
 def add_utterances(utterances, intent_id):
@@ -47,9 +47,6 @@ def get_accuracy():
 def create_mutants_helper(strategy, validation, chatbot, nb):
     utt_to_mutate = Utterance.objects.filter(
         expected_intent__application=chatbot
-    ).exclude(
-        mutant__strategy=strategy,
-        mutant__validation=validation
     )
     nb_mutants = 0
     for utt in utt_to_mutate:

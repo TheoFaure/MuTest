@@ -50,8 +50,6 @@ def compute_answers(request):
 
 
 def create_mutants(request):
-    nb_missing_answers = Mutant.objects.filter(answer_id__isnull=True).count()
-
     if request.method == 'POST':
         form = CreateMutantsForm(request.POST)
         if form.is_valid():
@@ -60,12 +58,15 @@ def create_mutants(request):
                                                form.cleaned_data['chatbot'],
                                                form.cleaned_data['nb_per_mutant'])
 
+            nb_missing_answers = Mutant.objects.filter(answer_id__isnull=True).count()
+
             return render(request, 'framework/create_mutants.html',
                           {'form': CreateMutantsForm(),
                            'nb_mutants': nb_mutants,
                            'nb_missing_answers': nb_missing_answers}) #HttpResponseRedirect('/framework/utterance_answers/')
     else:
         form = CreateMutantsForm()
+    nb_missing_answers = Mutant.objects.filter(answer_id__isnull=True).count()
     return render(request, 'framework/create_mutants.html', {'form': form,
                                                              'nb_mutants': -1,
                                                              'nb_missing_answers': nb_missing_answers})
@@ -100,7 +101,7 @@ def results_detailed(request):
     utt = Utterance.objects.all()
     utterances = []
     for u in utt:
-        if u.intent_robustness == 1 or u.entity_robustness < 1 :
+        if u.intent_robustness < 1 or u.entity_robustness < 1 :
             utterances.append(u)
     context = {'utterances': utterances}
     return HttpResponse(template.render(context, request))

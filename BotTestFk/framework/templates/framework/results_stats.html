@@ -1,13 +1,15 @@
 
 {% extends "framework/base.html" %}
 
+{% block title %}Results general - BotTestFk{% endblock %}
+
 {% block content %}
     <h1>Results</h1>
 
     <table id="intent_robustness">
     <tr>
     <th scope="col">Intent</th>
-    <th scope="col">Robustness</th>
+    <th scope="col">Intent Robustness</th>
     </tr>
         {% for i in intents%}
             <tr>
@@ -20,7 +22,7 @@
     <table id="strategy_robustness">
     <tr>
     <th scope="col">Strategy</th>
-    <th scope="col">Robustness</th>
+    <th scope="col">Intent Robustness</th>
     </tr>
         {% for s in strategies%}
             <tr>
