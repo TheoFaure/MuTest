@@ -1,10 +1,48 @@
 import copy
-import math
+import os
 import random
 import re
 
-from framework.helpers.api_calls import syntax_text
+import pickle
+
+import unicodedata
+
+from framework.helpers.api_calls import syntax_text, translate_google
 from framework.models.homophones import Word
+from BotTestFk import settings
+
+#### MUTATION METHODS ####
+##########################
+# This file contains all the mutation methods.
+# Takes as parameter the sentence to mutate, and all the existing
+# mutants for this sentence.
+# Returns the mutant if it is new.
+# If we cannot create any new mutant with this method, returns "no mutant".
+##########################
+
+def strip_accents(s):
+    '''Removes accents to the sentence s and returns it.'''
+    return ''.join(c for c in unicodedata.normalize('NFD', s)
+                   if unicodedata.category(c) != 'Mn')
+
+
+def clean_sentence(sentence):
+    '''
+    Removes all accents,
+    things between parenthesis, brackets,
+    special characters except -'?!.,;:
+    multiple spaces.
+    '''
+    sentence = re.sub(r"\xa0", " ", sentence) # delete strange char
+    sentence = re.sub(r"\[?[0-9]*\]", "", sentence) # delete number in brackets
+    sentence = re.sub(r"(?<=[\.?!])(?=[^0-9])", " ", sentence) # put a space after each point
+    sentence = re.sub(r"\([^()]*\)", "", sentence) # delete something between parenthesis
+    sentence = re.sub(r"\([^()]*\)", "", sentence) # delete something between parenthesis (in case of nested parenthesis)
+    sentence = re.sub(r'œ', 'oe', sentence)
+    # sentence = strip_accents(sentence)
+    sentence = re.sub(r'[^\w\-\',.:;!?]',' ', sentence) # remove special char except -'?!.,;:
+    sentence = " ".join(sentence.split()) # remove multiple spaces
+    return sentence
 
 
 def swap(array, i1, i2):
@@ -162,7 +200,11 @@ def mutation_homophones(sentence, existing_mutants):
 
     for word_index_in_sentence, sentence_word in enumerate(sentence_words):
         if sentence_word in list_homo_words:
-            possibilities_for_this = Word.objects.get(word=sentence_word).homophone.word_set.values('word')
+            try:
+                possibilities_for_this = Word.objects.get(word=sentence_word).homophone.word_set.values('word')
+            except Exception as e:
+                print(sentence_word, sentence)
+                raise e
             array_possibilities = [a['word'] for a in possibilities_for_this if a['word'] != sentence_word]
             for possible_swap in array_possibilities:
                 possibilities.append([word_index_in_sentence, sentence_word, possible_swap])
@@ -177,4 +219,56 @@ def mutation_homophones(sentence, existing_mutants):
     if mutant in [a['sentence'] for a in existing_mutants.values('sentence')]:
         raise ValueError("Fail, the mutant created already exists... bug in homophones creation")
 
+    return mutant
+
+
+# def mutation_google_translate(sentence, existing_mutants):
+#     trans1 = translate_google(sentence, "en", "sp")
+#     mutant = translate_google(trans1, "sp", "en")
+#     if mutant != sentence and mutant not in existing_mutants:
+#         return mutant
+#     else:
+#         return "no mutant"
+
+
+def create_embedding_mut(sentence, words, prob_word_swapped=0.6):
+    m = []
+    for w in sentence:
+        if random.random() > prob_word_swapped:
+            try:
+                if len(words[w])>0:
+                    m.append(words[w][random.randint(0, len(words[w])-1)])
+            except KeyError:
+                m.append(w)
+        else:
+            m.append(w)
+    return " ".join(m)
+
+
+def mutation_w2v(sentence, existing_mutants):
+    sentence_ar = sentence.split(" ")
+    words = pickle.load(open(
+        '/home/theo/Projects/MuTest/BotTestFk/framework/static/framework/sim_words_GoogleNews_W2V.pickle', 'rb'), encoding='latin1')
+    mutant = create_embedding_mut(sentence_ar, words)
+    i = 0
+    while mutant == sentence_ar and mutant in existing_mutants:
+        mutant = create_embedding_mut(sentence_ar, words)
+        i += 1
+        if i > 9:
+            return "no mutant"
+    return mutant
+
+
+def mutation_glove(sentence, existing_mutants):
+    sentence_ar = sentence.split(" ")
+    words = pickle.load(
+        open(os.path.join(settings.PROJECT_PATH,
+                          "framework/static/framework/sim_words_glove300.pickle"), "rb"))
+    mutant = create_embedding_mut(sentence_ar, words)
+    i = 0
+    while mutant == sentence_ar and mutant in existing_mutants:
+        mutant = create_embedding_mut(sentence_ar, words)
+        i += 1
+        if i > 9:
+            return "no mutant"
     return mutant

@@ -1,7 +1,7 @@
 from django.db import models
 from framework.helpers.api_calls import get_luis
 from framework.helpers.mutation_methods import mutation_homophones, mutation_swap_letter, mutation_swap_word, mutation_random, \
-    mutation_verb_at_end
+    mutation_verb_at_end, mutation_w2v, mutation_glove
 
 from framework.helpers.validation_methods import is_valid_true, is_valid_spellcheck
 
@@ -61,12 +61,17 @@ class Intent(models.Model):
     def robustness(self):
         robustness = 0
         utt = Utterance.objects.filter(answer__intent=self)
+        print(self.__str__(), utt.count())
         if utt.count() > 0:
             for u in utt:
                 robustness += u.intent_robustness
-            return robustness / utt.count()
+            return round(robustness / utt.count(), 2)
         else:
             return 0
+
+    @property
+    def nb_mut_ans(self):
+        return Mutant.objects.filter(utterance__answer__intent=self).count()
 
 
 class Entity(models.Model):
@@ -101,13 +106,22 @@ class Strategy(models.Model):
     @property
     def intent_robustness(self):
         robustness = 0
-        utt = Utterance.objects.filter(mutant__strategy=self)
+        utt = Utterance.objects.filter(mutant__strategy=self, mutant__answer__isnull=False).distinct()
+        print(self.__str__(), utt.count())
         if utt.count() > 0:
             for u in utt:
-                robustness += u.intent_robustness
-            return robustness / utt.count()
+                robustness += u.intent_robustness_for_strat(self)
+            return round(robustness / utt.count(), 2)
         else:
             return 0
+
+    @property
+    def nb_mut_ans(self):
+        return Mutant.objects.filter(strategy=self, answer__isnull=False).count()
+
+    @property
+    def nb_mut_without_ans(self):
+        return Mutant.objects.filter(strategy=self, answer__isnull=True).count()
 
 
 class Validation(models.Model):
@@ -132,7 +146,9 @@ class Utterance(models.Model):
                             "swapletter": mutation_swap_letter,
                             "swapword": mutation_swap_word,
                             "random": mutation_random,
-                            "verb-end": mutation_verb_at_end}
+                            "verb-end": mutation_verb_at_end,
+                            "w2v": mutation_w2v,
+                            "glove": mutation_glove}
 
     dispatcher_validations = {"none": is_valid_true,
                               "google-spell-check": is_valid_spellcheck}
@@ -142,8 +158,12 @@ class Utterance(models.Model):
 
     def compute_answer(self):
         if self.answer == None:
-            self.answer = get_answer(self.sentence)
-            self.save()
+            try:
+                self.answer = get_answer(self.sentence)
+                self.save()
+            except KeyError as e:
+                self.delete()
+                pass
 
     def mutate(self, strategy, validation, nb):
         strategy_method = self.dispatcher_mutations[strategy.name]
@@ -178,12 +198,13 @@ class Utterance(models.Model):
 
     @property
     def intent_robustness(self):
-        if self.mutant_set.count() > 0:
+        mutants_with_answer = self.mutant_set.filter(answer__isnull=False)
+        if mutants_with_answer.count() > 0:
             r = 0
-            for m in self.mutant_set.all():
+            for m in mutants_with_answer:
                 if self.answer.intent == m.answer.intent:
                     r += 1
-            return r / self.mutant_set.count()
+            return round(r / mutants_with_answer.count(), 2)
         else:
             return 1
 
@@ -193,9 +214,21 @@ class Utterance(models.Model):
             score = 0
             for m in self.mutant_set.all():
                 score += m.entity_robustness
-            return score / self.mutant_set.count()
+            return round(score / self.mutant_set.count(), 2)
         else:
             return 1
+
+    def intent_robustness_for_strat(self, strat):
+        mutants_with_answer_for_strat = self.mutant_set.filter(answer__isnull=False, strategy=strat)
+        if mutants_with_answer_for_strat.count() > 0:
+            r = 0
+            for m in mutants_with_answer_for_strat:
+                if self.answer.intent == m.answer.intent:
+                    r += 1
+            return r / mutants_with_answer_for_strat.count()
+        else:
+            return 1
+
 
 class Mutant(models.Model):
     sentence = models.CharField(max_length=1000)
@@ -209,19 +242,24 @@ class Mutant(models.Model):
 
     def compute_answer(self):
         if self.answer == None:
-            self.answer = get_answer(self.sentence)
-            self.save()
+            try:
+                self.answer = get_answer(self.sentence)
+                self.save()
+            except KeyError as e:
+                self.delete()
+                pass
+
 
     @property
     def entity_robustness(self):
         score = 0
-        if self.utterance.answer.entity.all().count() > 0:
+        if self.utterance.answer.entity.all().count() > 0 and self.answer != None:
             for e1 in self.utterance.answer.entity.all():
                 available_entities = [e for e in self.answer.entity.all()]
                 for e2 in reversed(available_entities):
                     if e1.is_same_entity(e2):
                         score += 1
                         available_entities.remove(e2)
-            return score / self.utterance.answer.entity.all().count()
+            return round(score / self.utterance.answer.entity.all().count(), 2)
         else:
             return 1

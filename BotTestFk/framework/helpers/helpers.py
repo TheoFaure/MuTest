@@ -1,5 +1,4 @@
 from django.db.models import Count
-
 from framework.models.models import Utterance, Intent, Answer
 
 

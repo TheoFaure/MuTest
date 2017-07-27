@@ -10,12 +10,19 @@ from google.cloud import language
 import apiai
 
 
+#### API CALLS ####
+###################
+# This file contains the methods to make calls to external APIs.
+# The api keys are stored in a file "api_keys".
+###################
+
+
 yandex_api_key = open('/home/theo/Projects/MuTest/api_keys/yandex_translation').readline()
 translation_api_key = open('/home/theo/Projects/MuTest/api_keys/microsoft_translation').readline()
 token_translation = ''
 luisai_key = open('/home/theo/Projects/MuTest/api_keys/luisai').readline()
 apiai_token = open('/home/theo/Projects/MuTest/api_keys/apiai').readline()
-
+google_trans_token = open('/home/theo/Projects/MuTest/api_keys/google_translation').readline()
 # spellcheck_microsoft_key = open('~/Projects/MuTests/api_keys/microsoft_spellcheck').readline()
 
 
@@ -155,7 +162,7 @@ def syntax_text(text):
     return tokens
 
 
-def translate_google(text, target):
+def translate_google2(text, target):
     # translate_client = translate.Client()
     # if isinstance(text, six.binary_type):
     #     text = text.decode('utf-8')
@@ -165,4 +172,26 @@ def translate_google(text, target):
     #     target_language=target)
     #
     # return translation['translatedText']
-    return "translation", ""
+    return "", ""
+
+
+def translate_google(text, source, target):
+    headers = {
+        'Authorization': 'Bearer {token}'.format(token=google_trans_token)
+    }
+
+    params = urllib.parse.urlencode({
+        'Content-Type': 'text/json'
+    })
+
+    body = ("{'q': \'%s\', 'source': \'%s\', 'target': \'%s\', 'format': 'text'}" % (text, source, target))
+
+    try:
+        data, headers, status = send_request("POST", 'translation.googleapis.com', "/language/translate/v2",
+                                             headers=headers, params=params, body=body)
+        json_obj = json.loads(data.decode('utf-8'))
+        return json_obj['data']['translations'][0]['translatedText']
+    except Exception as e:
+        print("Caught error: " + repr(e))
+        print(data, headers, status)
+        raise

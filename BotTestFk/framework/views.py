@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models.models import Utterance, Answer, Intent, Mutant, Strategy
 from django.template import loader
-from .forms import UploadUtterancesForm, CreateMutantsForm
+from .forms import UploadUtterancesForm, CreateMutantsForm, GetAnsMutantsForm
 from .helpers.helpers import add_utterances, get_accuracy, create_mutants_helper
 from django.http import HttpResponseRedirect
 
@@ -72,17 +72,24 @@ def create_mutants(request):
                                                              'nb_missing_answers': nb_missing_answers})
 
 
-@csrf_exempt
 def mutants_answers(request):
-    mut_without_ans = Mutant.objects.filter(answer_id__isnull=True)
-    for mut in mut_without_ans:
-        mut.compute_answer()
+    if request.method == 'POST':
+        form = GetAnsMutantsForm(request.POST)
+        if form.is_valid():
+            strat = form.cleaned_data['strategy']
+            nb = form.cleaned_data['nb_answers']
 
-    nb_missing_answers = Mutant.objects.filter(answer_id__isnull=True).count()
+            mutants_to_compute = Mutant.objects.filter(answer_id__isnull=True, strategy=strat)[:nb]
+            for mut in mutants_to_compute:
+                mut.compute_answer()
 
-    context = {"nb_missing_answers": nb_missing_answers}
-    j = json.dumps(context)
-    return HttpResponse(j)
+            return render(request, 'framework/mutants_answers.html',
+                          {'form': GetAnsMutantsForm(),
+                           'strategies': Strategy.objects.all()})
+    else:
+        form = GetAnsMutantsForm()
+    return render(request, 'framework/mutants_answers.html', {'form': form,
+                                                             'strategies': Strategy.objects.all()})
 
 
 def results_stats(request):

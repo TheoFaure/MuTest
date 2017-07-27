@@ -23,7 +23,7 @@
                 <th scope="col">Entities</th>
             </tr>
             {% for m in utterance.mutant_set.all %}
-                {% if m.strategy == strategy %}
+                {% if m.strategy == strategy and m.answer != Null %}
                     {% if m.answer.intent == utterance.answer.intent and m.entity_robustness == 1 %}
                         <tr style="color:green" class="good-answer">
                     {% else %}

@@ -130,3 +130,4 @@ STATICFILES_DIRS = (
 )
 
 PROJECT_PATH = os.path.abspath(os.path.dirname(__name__))
+

@@ -3,7 +3,7 @@ import os
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from framework.models import Homophone, Word
+from framework.models.homophones import Homophone, Word
 
 class Command(BaseCommand):
     args = ''
