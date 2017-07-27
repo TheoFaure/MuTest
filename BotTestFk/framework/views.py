@@ -141,7 +141,8 @@ def results_utterance(request, utterance_id):
     template = loader.get_template('framework/results_utterance.html')
 
     utterance = Utterance.objects.get(id=utterance_id)
-    possible_strategies = Strategy.objects.filter(mutant__utterance=utterance_id, mutant__answer__isnull=False).distinct()
+    possible_strategies = Strategy.objects.filter(mutant__utterance=utterance_id,
+                                                  mutant__answer__isnull=False).distinct()
 
     context = {
         'utterance': utterance,
@@ -151,6 +152,7 @@ def results_utterance(request, utterance_id):
 
 
 def index(request):
+    '''Route to index'''
     template = loader.get_template('framework/index.html')
     context = {}
     return HttpResponse(template.render(context, request))

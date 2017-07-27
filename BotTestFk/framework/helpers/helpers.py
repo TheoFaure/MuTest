@@ -1,8 +1,14 @@
 from django.db.models import Count
 from framework.models.models import Utterance, Intent, Answer
 
+#### HELPERS ####
+##########################
+# Some useful helpers, to make views smaller.
+##########################
+
 
 def add_utterances(utterances, intent_id):
+    '''To add the utterances in the database.'''
     lines = utterances.split("\r\n")
 
     intent = Intent.objects.get(id=intent_id)
@@ -14,6 +20,9 @@ def add_utterances(utterances, intent_id):
 
 
 def get_accuracy():
+    '''Computes the accuracies.
+    Accuracy is the difference between the expected intent of a utterance, and the real intent computed.
+    This is the only use of the expected intent. For robustness, we use the computed intent.'''
     acc_per_intent = {}
     nb_per_intent = {}
 
@@ -44,6 +53,7 @@ def get_accuracy():
 
 
 def create_mutants_helper(strategy, validation, chatbot, nb):
+    '''Link between the view that creates the mutants, and the method in the model to create them.'''
     utt_to_mutate = Utterance.objects.filter(
         expected_intent__application=chatbot
     )
