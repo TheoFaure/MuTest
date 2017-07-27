@@ -1,19 +1,16 @@
 import json
-
-from django.db.models import Count
 from django.shortcuts import render
-
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-
-from .models.models import Utterance, Answer, Intent, Mutant, Strategy
+from .models.models import Utterance, Intent, Mutant, Strategy
 from django.template import loader
 from .forms import UploadUtterancesForm, CreateMutantsForm, GetAnsMutantsForm
 from .helpers.helpers import add_utterances, get_accuracy, create_mutants_helper
-from django.http import HttpResponseRedirect
 
 
 def manage_utterances(request):
+    '''Route to add utterances
+    :return The form to add utterances'''
     if request.method == 'POST':
         form = UploadUtterancesForm(request.POST)
         if form.is_valid():
@@ -25,6 +22,9 @@ def manage_utterances(request):
 
 
 def utterance_answers(request):
+    '''Route to show the page to compute answers to utterances.
+    Shows the accuracy and the number of missing answers.
+    :return nb of missing answers, the accuracies for each intent'''
     template = loader.get_template('framework/utterance_answers.html')
     nb_missing_answers = Utterance.objects.filter(answer_id__isnull=True).count()
     accuracies = get_accuracy()
@@ -36,6 +36,9 @@ def utterance_answers(request):
 
 @csrf_exempt
 def compute_answers(request):
+    '''Route to compute answers to the utterances.
+    (hit with ajax, which is why csrf_exempt).
+    :return nb of missing answers, the accuracies for each intent '''
     utt_without_ans = Utterance.objects.filter(answer_id__isnull=True)
     for utt in utt_without_ans:
         utt.compute_answer()
@@ -50,6 +53,16 @@ def compute_answers(request):
 
 
 def create_mutants(request):
+    '''Route to create the mutants.
+    This will create NEW mutants for the strategy selected, using the validation selected,
+    for the chatbot selected.
+    Nb_per_mutant is the number of mutants that will be created for each sentence.
+    For example if Nb_per_mutant=5. For each utterance:
+        If there already are 5 mutants for the sentence, no mutant will be created.
+        If there is 1 mutant, 4 will be created.
+        If there is 1 mutant, and only 1 other can be created (because the strategy selected can
+           create only 1 mutant. Only 1 mutant will be created (no duplicate).
+    :return The form to create mutants, the nb of mutants created, the nb of missing answers'''
     if request.method == 'POST':
         form = CreateMutantsForm(request.POST)
         if form.is_valid():
@@ -73,6 +86,9 @@ def create_mutants(request):
 
 
 def mutants_answers(request):
+    '''Compute the answers for the mutants.
+    You can chose how many answers you want to create.
+    :return The form to get answers to mutants, the strategies'''
     if request.method == 'POST':
         form = GetAnsMutantsForm(request.POST)
         if form.is_valid():
@@ -93,6 +109,9 @@ def mutants_answers(request):
 
 
 def results_stats(request):
+    '''Route to show the general results.
+    Shows the robustness by intent and by strategy.
+    :return the intents, the strategies'''
     template = loader.get_template('framework/results_stats.html')
 
     intents = Intent.objects.all()
@@ -104,6 +123,8 @@ def results_stats(request):
 
 
 def results_detailed(request):
+    '''Route to show the results detailed per utterance.
+    :return The utterances.'''
     template = loader.get_template('framework/results_detailed.html')
     utt = Utterance.objects.all()
     utterances = []
@@ -115,10 +136,12 @@ def results_detailed(request):
 
 
 def results_utterance(request, utterance_id):
+    '''Route to the detailed results for a specific utterance.
+    :return the utterance, the strategies'''
     template = loader.get_template('framework/results_utterance.html')
 
     utterance = Utterance.objects.get(id=utterance_id)
-    possible_strategies = Strategy.objects.filter(mutant__utterance=utterance_id).distinct()
+    possible_strategies = Strategy.objects.filter(mutant__utterance=utterance_id, mutant__answer__isnull=False).distinct()
 
     context = {
         'utterance': utterance,
